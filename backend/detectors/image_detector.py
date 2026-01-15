@@ -89,34 +89,34 @@ class ImageDetector:
                         }
                     })
                 
-                # Signal 5: ML-based Error Level Analysis (ELA)
-                ela_result = ml_image_detector.error_level_analysis(image_path)
-                if ela_result.get('ela_score', 0) > 0.4:
-                    signals.append({
-                        'type': 'manipulation_artifacts',
-                        'confidence': min(ela_result['ela_score'] * 1.2, 0.95),
-                        'description': 'Error Level Analysis detected inconsistent compression patterns',
-                        'evidence': {
-                            'ela_score': round(ela_result['ela_score'], 2),
-                            'std_error': round(ela_result.get('std_error', 0), 2),
-                            'suspicious_regions': ela_result.get('suspicious_regions', False),
-                            'method': 'ML-based ELA'
-                        }
-                    })
+                # Signal 5: ML-based Error Level Analysis (ELA) - disabled (not implemented)
+                # ela_result = ml_image_detector.error_level_analysis(image_path)
+                # if ela_result.get('ela_score', 0) > 0.4:
+                #     signals.append({
+                #         'type': 'manipulation_artifacts',
+                #         'confidence': min(ela_result['ela_score'] * 1.2, 0.95),
+                #         'description': 'Error Level Analysis detected inconsistent compression patterns',
+                #         'evidence': {
+                #             'ela_score': round(ela_result['ela_score'], 2),
+                #             'std_error': round(ela_result.get('std_error', 0), 2),
+                #             'suspicious_regions': ela_result.get('suspicious_regions', False),
+                #             'method': 'ML-based ELA'
+                #         }
+                #     })
                 
-                # Signal 6: Copy-Move Forgery Detection
-                copy_move = ml_image_detector.detect_copy_move(image_path)
-                if copy_move.get('copy_move_score', 0) > 0.3:
-                    signals.append({
-                        'type': 'manipulation_artifacts',
-                        'confidence': copy_move['copy_move_score'] * 0.8,
-                        'description': 'Possible copy-move forgery detected (duplicated regions)',
-                        'evidence': {
-                            'suspicion_score': round(copy_move['copy_move_score'], 2),
-                            'similar_blocks': copy_move.get('similar_blocks', 0),
-                            'method': 'Block matching analysis'
-                        }
-                    })
+                # Signal 6: Copy-Move Forgery Detection - disabled (not implemented)
+                # copy_move = ml_image_detector.detect_copy_move(image_path)
+                # if copy_move.get('copy_move_score', 0) > 0.3:
+                #     signals.append({
+                #         'type': 'manipulation_artifacts',
+                #         'confidence': copy_move['copy_move_score'] * 0.8,
+                #         'description': 'Possible copy-move forgery detected (duplicated regions)',
+                #         'evidence': {
+                #             'suspicion_score': round(copy_move['copy_move_score'], 2),
+                #             'similar_blocks': copy_move.get('similar_blocks', 0),
+                #             'method': 'Block matching analysis'
+                #         }
+                #     })
                 
                 # Signal 7: Metadata context check
                 if metadata and metadata.get('source'):

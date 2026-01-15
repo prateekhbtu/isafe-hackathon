@@ -175,34 +175,34 @@ class TextDetector:
                     }
                 })
         
-        # Signal 9: ML-based sentiment manipulation
-        sentiment_result = ml_text_detector.analyze_sentiment_manipulation(text)
-        if sentiment_result.get('manipulation_score', 0) > 0.6:
-            signals.append({
-                'type': 'emotional_manipulation',
-                'confidence': sentiment_result['manipulation_score'] * 0.9,
-                'description': 'ML analysis detected extreme sentiment manipulation',
-                'evidence': {
-                    'polarity': round(sentiment_result.get('sentiment_polarity', 0), 2),
-                    'subjectivity': round(sentiment_result.get('subjectivity', 0), 2),
-                    'is_extreme': sentiment_result.get('is_extreme', False),
-                    'method': 'TextBlob sentiment analysis'
-                }
-            })
+        # Signal 9: ML-based sentiment manipulation (disabled - not implemented)
+        # sentiment_result = ml_text_detector.analyze_sentiment_manipulation(text)
+        # if sentiment_result.get('manipulation_score', 0) > 0.6:
+        #     signals.append({
+        #         'type': 'emotional_manipulation',
+        #         'confidence': sentiment_result['manipulation_score'] * 0.9,
+        #         'description': 'ML analysis detected extreme sentiment manipulation',
+        #         'evidence': {
+        #             'polarity': round(sentiment_result.get('sentiment_polarity', 0), 2),
+        #             'subjectivity': round(sentiment_result.get('subjectivity', 0), 2),
+        #             'is_extreme': sentiment_result.get('is_extreme', False),
+        #             'method': 'TextBlob sentiment analysis'
+        #         }
+        #     })
         
-        # Signal 10: Urgency pattern detection
-        urgency_result = ml_text_detector.detect_urgency_patterns(text)
-        if urgency_result.get('urgency_score', 0) > 0.4:
-            signals.append({
-                'type': 'emotional_manipulation',
-                'confidence': urgency_result['urgency_score'],
-                'description': f'Text uses urgency tactics to pressure immediate action',
-                'evidence': {
-                    'urgency_keywords': urgency_result['urgency_keywords_found'],
-                    'time_pressure': urgency_result['time_pressure_detected'],
-                    'urgency_score': round(urgency_result['urgency_score'], 2)
-                }
-            })
+        # Signal 10: Urgency pattern detection (disabled - not implemented)
+        # urgency_result = ml_text_detector.detect_urgency_patterns(text)
+        # if urgency_result.get('urgency_score', 0) > 0.4:
+        #     signals.append({
+        #         'type': 'emotional_manipulation',
+        #         'confidence': urgency_result['urgency_score'],
+        #         'description': f'Text uses urgency tactics to pressure immediate action',
+        #         'evidence': {
+        #             'urgency_keywords': urgency_result['urgency_keywords_found'],
+        #             'time_pressure': urgency_result['time_pressure_detected'],
+        #             'urgency_score': round(urgency_result['urgency_score'], 2)
+        #         }
+        #     })
         
         # Signal 11: Source metadata check
         if metadata and metadata.get('source'):
