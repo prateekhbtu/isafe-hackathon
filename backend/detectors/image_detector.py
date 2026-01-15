@@ -8,7 +8,7 @@ import os
 import hashlib
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from ml_detectors import ml_image_detector
+# from ml_detectors import ml_image_detector  # Not implemented yet
 
 
 class ImageDetector:

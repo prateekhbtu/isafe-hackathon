@@ -8,7 +8,7 @@ from collections import Counter
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from ml_detectors import ml_text_detector
+# from ml_detectors import ml_text_detector  # Not implemented yet
 
 
 class TextDetector:

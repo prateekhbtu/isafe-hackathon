@@ -8,7 +8,7 @@ export default function Home() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
+      setScrolled(window.scrollY > 20)
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
@@ -18,9 +18,6 @@ export default function Home() {
     <>
       {/* Animated Background */}
       <div className="bg-grid" />
-      <div className="bg-gradient-blur bg-blur-1" />
-      <div className="bg-gradient-blur bg-blur-2" />
-      <div className="bg-gradient-blur bg-blur-3" />
 
       {/* Navigation */}
       <nav className={`nav ${scrolled ? 'nav-scrolled' : ''}`}>
@@ -57,8 +54,7 @@ export default function Home() {
             </div>
 
             <h1 className="hero-title">
-              Detect Deception.<br />
-              <span className="hero-title-gradient">Protect Truth.</span>
+              Detect Deception.<br />Protect Truth.
             </h1>
 
             <p className="hero-subtitle">
@@ -82,15 +78,15 @@ export default function Home() {
             <div className="hero-stats">
               <div className="hero-stat">
                 <div className="hero-stat-value">4</div>
-                <div className="hero-stat-label">Modalities Supported</div>
+                <div className="hero-stat-label">Modalities</div>
               </div>
               <div className="hero-stat">
                 <div className="hero-stat-value">15+</div>
-                <div className="hero-stat-label">Detection Signals</div>
+                <div className="hero-stat-label">Signals</div>
               </div>
               <div className="hero-stat">
                 <div className="hero-stat-value">AI</div>
-                <div className="hero-stat-label">Gemini Verified</div>
+                <div className="hero-stat-label">Verified</div>
               </div>
               <div className="hero-stat">
                 <div className="hero-stat-value">100%</div>
@@ -102,7 +98,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="section">
+      <section id="features" className="section section-alt">
         <div className="container">
           <div className="section-header">
             <span className="section-tag">Features</span>
@@ -119,8 +115,7 @@ export default function Home() {
               <h3 className="feature-title">Image Analysis</h3>
               <p className="feature-desc">
                 Error Level Analysis (ELA), copy-move detection, metadata inspection,
-                and reverse image search signals to identify manipulated or
-                misattributed images.
+                and reverse image search signals to identify manipulated or misattributed images.
               </p>
             </div>
 
@@ -215,7 +210,7 @@ export default function Home() {
       </section>
 
       {/* Technology Section */}
-      <section id="technology" className="section">
+      <section id="technology" className="section section-alt">
         <div className="container">
           <div className="section-header">
             <span className="section-tag">Stack</span>
@@ -273,7 +268,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+          <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon">⚖️</div>
               <h3 className="feature-title">No Binary Claims</h3>
@@ -312,7 +307,7 @@ export default function Home() {
             <p className="cta-subtitle">
               Start detecting deception risks in your media content today.
             </p>
-            <Link href="/tool" className="btn btn-primary btn-large">
+            <Link href="/tool" className="btn btn-large" style={{ background: 'white', color: 'black' }}>
               Try MDRS Now
               <svg className="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -326,7 +321,7 @@ export default function Home() {
       <footer className="footer">
         <div className="container">
           <p className="footer-text">
-            Built for iSafe Hackathon 2026 • Multimodal Deception Risk Scorer
+            Built for iSafe Hackathon 2026 • <a href="#" className="footer-link">Multimodal Deception Risk Scorer</a>
           </p>
         </div>
       </footer>
