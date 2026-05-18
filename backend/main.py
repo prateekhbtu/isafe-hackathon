@@ -11,7 +11,6 @@ import os
 import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
-import mimetypes
 import httpx
 import ipaddress
 import socket
@@ -94,7 +93,12 @@ def _is_disallowed_host(hostname: str) -> bool:
     return False
 
 
-async def _download_media_url(url: str, expected_prefix: str, allowed_extensions: set[str]) -> str:
+async def _download_media_url(
+    url: str,
+    expected_prefix: str,
+    allowed_extensions: set[str],
+    default_extension: str
+) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
@@ -118,20 +122,13 @@ async def _download_media_url(url: str, expected_prefix: str, allowed_extensions
     if content_type:
         if not content_type.startswith(expected_prefix):
             raise HTTPException(status_code=400, detail=f"Invalid media type. Expected {expected_prefix} content.")
-        guessed_suffix = mimetypes.guess_extension(content_type) or ''
-    else:
-        guessed_suffix = ''
-        if not url_suffix or url_suffix not in allowed_extensions:
-            raise HTTPException(status_code=400, detail="Unable to determine media type from URL.")
+    elif not url_suffix or url_suffix not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Unable to determine media type from URL.")
 
     if not response.content:
         raise HTTPException(status_code=400, detail="Media URL returned empty content.")
 
-    safe_suffix = ''
-    if guessed_suffix in allowed_extensions:
-        safe_suffix = guessed_suffix
-    elif url_suffix in allowed_extensions:
-        safe_suffix = url_suffix
+    safe_suffix = default_extension if default_extension in allowed_extensions else ''
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=safe_suffix) as tmp_file:
         tmp_file.write(response.content)
@@ -215,7 +212,7 @@ async def analyze_video(
             raise HTTPException(status_code=400, detail="Provide either a video file or URL, not both.")
 
         if url:
-            tmp_path = await _download_media_url(url, "video/", VIDEO_EXTENSIONS)
+            tmp_path = await _download_media_url(url, "video/", VIDEO_EXTENSIONS, ".mp4")
         elif file:
             if not file.content_type or not file.content_type.startswith('video/'):
                 raise HTTPException(status_code=400, detail="Invalid file type. Expected video.")
@@ -266,7 +263,7 @@ async def analyze_audio(
             raise HTTPException(status_code=400, detail="Provide either an audio file or URL, not both.")
 
         if url:
-            tmp_path = await _download_media_url(url, "audio/", AUDIO_EXTENSIONS)
+            tmp_path = await _download_media_url(url, "audio/", AUDIO_EXTENSIONS, ".mp3")
         elif file:
             if not file.content_type or not file.content_type.startswith('audio/'):
                 raise HTTPException(status_code=400, detail="Invalid file type. Expected audio.")
