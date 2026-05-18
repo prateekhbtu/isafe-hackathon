@@ -27,8 +27,6 @@ const formatGeminiText = (text: string) => {
   )
 }
 
-type Modality = 'image' | 'video' | 'audio' | 'text'
-
 interface Signal {
   signal: string
   description: string
@@ -70,6 +68,7 @@ const modalityConfig = {
 export default function ToolPage() {
   const [activeTab, setActiveTab] = useState<Modality>('image')
   const [file, setFile] = useState<File | null>(null)
+  const [mediaUrl, setMediaUrl] = useState('')
   const [textContent, setTextContent] = useState('')
   const [source, setSource] = useState('')
   const [timestamp, setTimestamp] = useState('')
@@ -81,6 +80,7 @@ export default function ToolPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
+      setMediaUrl('')
       setError(null)
     }
   }
@@ -100,8 +100,15 @@ export default function ToolPage() {
     e.currentTarget.classList.remove('drag-over')
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0])
+      setMediaUrl('')
       setError(null)
     }
+  }
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMediaUrl(e.target.value)
+    if (file) setFile(null)
+    setError(null)
   }
 
   const handleAnalyze = async () => {
@@ -119,6 +126,18 @@ export default function ToolPage() {
           return
         }
         formData.append('text', textContent)
+      } else if (activeTab === 'audio' || activeTab === 'video') {
+        if (!file && !mediaUrl.trim()) {
+          setError(`Please select a ${activeTab} file or paste a URL to analyze`)
+          setLoading(false)
+          return
+        }
+        if (file) {
+          formData.append('file', file)
+        }
+        if (mediaUrl.trim()) {
+          formData.append('url', mediaUrl.trim())
+        }
       } else {
         if (!file) {
           setError('Please select a file to analyze')
@@ -153,12 +172,22 @@ export default function ToolPage() {
 
   const resetForm = () => {
     setFile(null)
+    setMediaUrl('')
     setTextContent('')
     setSource('')
     setTimestamp('')
     setContext('')
     setResult(null)
     setError(null)
+  }
+
+  const isAnalyzeDisabled = () => {
+    if (loading) return true
+    if (activeTab === 'text') return !textContent.trim()
+    if (activeTab === 'audio' || activeTab === 'video') {
+      return !file && !mediaUrl.trim()
+    }
+    return !file
   }
 
   return (
@@ -210,6 +239,7 @@ export default function ToolPage() {
                         onClick={() => {
                           setActiveTab(modality)
                           setFile(null)
+                          setMediaUrl('')
                           setTextContent('')
                           setError(null)
                         }}
@@ -271,6 +301,21 @@ export default function ToolPage() {
                     </div>
                   )}
 
+                  {(activeTab === 'audio' || activeTab === 'video') && (
+                    <div className="text-input-area">
+                      <input
+                        type="url"
+                        className="metadata-input"
+                        value={mediaUrl}
+                        onChange={handleUrlChange}
+                        placeholder={`Paste ${activeTab} URL (https://...)`}
+                      />
+                      <p className="upload-hint">
+                        Provide a direct link to a supported file (mp3, mp4, mkv, etc.).
+                      </p>
+                    </div>
+                  )}
+
                   {/* Metadata Section */}
                   <div className="metadata-section">
                     <h4 className="metadata-title">
@@ -308,7 +353,7 @@ export default function ToolPage() {
                   <button
                     className="analyze-btn"
                     onClick={handleAnalyze}
-                    disabled={loading || (activeTab === 'text' ? !textContent.trim() : !file)}
+                    disabled={isAnalyzeDisabled()}
                   >
                     {loading ? (
                       <>
