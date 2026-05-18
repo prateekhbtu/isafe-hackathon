@@ -18,7 +18,7 @@
 
 ## 🎯 Overview
 
-**MDRS (Multimodal Deception Risk Scorer)** is a production-grade web application designed for hackathons and policy demonstrations. It provides **probabilistic risk assessment** for images, videos, audio, and text—**never** making binary "real vs. fake" claims.
+**MDRS (Multimodal Deception Risk Scorer)** is a hackathon-ready web application for policy demos and rapid prototyping. It provides **probabilistic risk assessment** for images, videos, audio, and text—**never** making binary "real vs. fake" claims.
 
 ### 🌟 Key Principles
 
@@ -47,6 +47,7 @@
 2. **Risk Triage Categories**: Low / Medium / High with actionable recommendations
 3. **Evidence Visualization**: Heatmaps, confidence scores, signal breakdowns
 4. **Metadata Contextualization**: Source credibility, timestamp verification
+5. **Direct Media Links**: Analyze audio/video from hosted URLs (no upload required)
 
 ---
 
@@ -57,7 +58,8 @@
 │                       Frontend (Next.js)                     │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
 │  │  Image  │  │  Video  │  │  Audio  │  │   Text  │        │
-│  │ Upload  │  │ Upload  │  │ Upload  │  │  Input  │        │
+│  │ Upload  │  │ Upload/ │  │ Upload/ │  │  Input  │        │
+│  │         │  │  URL    │  │  URL    │  │         │        │
 │  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
 │       │            │            │            │              │
 │       └────────────┴────────────┴────────────┘              │
@@ -126,7 +128,8 @@
 #### 1️⃣ Clone Repository
 
 ```bash
-cd "/home/prateek/Downloads/isafe hackathon"
+git clone https://github.com/prateekhbtu/isafe-hackathon.git
+cd isafe-hackathon
 ```
 
 #### 2️⃣ Backend Setup
@@ -169,7 +172,7 @@ Frontend will run at: **http://localhost:3000**
 
 1. Open **http://localhost:3000** in your browser
 2. Select a modality tab (Image / Video / Audio / Text)
-3. Upload media or paste text
+3. Upload media, paste a direct audio/video URL, or paste text
 4. **(Optional)** Add metadata: source, timestamp, context
 5. Click **"Analyze Media"**
 6. View:
@@ -195,6 +198,22 @@ curl -X POST http://localhost:8000/analyze/image \
 curl -X POST http://localhost:8000/analyze/text \
   -F "text=BREAKING: You won't believe this shocking news!" \
   -F "source=Facebook"
+```
+
+#### Analyze Audio by URL
+
+```bash
+curl -X POST http://localhost:8000/analyze/audio \
+  -F "url=https://example.com/sample.mp3" \
+  -F "source=Podcast"
+```
+
+#### Analyze Video by URL
+
+```bash
+curl -X POST http://localhost:8000/analyze/video \
+  -F "url=https://example.com/sample.mp4" \
+  -F "source=News Clip"
 ```
 
 ### Response Format
@@ -341,6 +360,10 @@ curl http://localhost:8000
 curl -X POST http://localhost:8000/analyze/text \
   -F "text=This is a normal statement."
 
+# Test audio via URL
+curl -X POST http://localhost:8000/analyze/audio \
+  -F "url=https://example.com/sample.mp3"
+
 # Expected: Low risk score
 ```
 
@@ -359,7 +382,7 @@ curl -X POST http://localhost:8000/analyze/text \
 ## 📚 Project Structure
 
 ```
-isafe hackathon/
+isafe-hackathon/
 ├── backend/
 │   ├── main.py                    # FastAPI server
 │   ├── risk_engine.py             # Risk scoring logic
@@ -450,7 +473,6 @@ Inspired by:
 
 For questions or issues:
 - Create an issue on GitHub
-- Contact: [Your Contact Info]
 
 ---
 
