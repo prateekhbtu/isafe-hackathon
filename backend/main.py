@@ -20,6 +20,16 @@ from detectors.image_detector import ImageDetector
 from detectors.video_detector import VideoDetector
 from detectors.audio_detector import AudioDetector
 from detectors.text_detector import TextDetector
+from newsapi_client import newsapi_client
+from utils.url_handler import (
+    is_youtube_url,
+    stream_download_media,
+    extract_youtube_stream,
+    ffmpeg_sample_media,
+    get_media_duration,
+    cleanup_temp_files,
+    MAX_DURATION_SECONDS,
+)
 
 app = FastAPI(
     title="MDRS API",
@@ -93,6 +103,102 @@ def _is_disallowed_host(hostname: str) -> bool:
     return False
 
 
+def _validate_url(url: str) -> None:
+    """
+    Validate URL with SSRF protection.
+    Raises HTTPException on invalid/dangerous URLs.
+    """
+    parsed = urlparse(url)
+
+    # Block dangerous protocols
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(
+            status_code=400,
+            detail="URL must start with http:// or https://"
+        )
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="URL must include a valid host.")
+    if parsed.username or parsed.password:
+        raise HTTPException(
+            status_code=400, detail="URL must not include credentials."
+        )
+
+    # Block internal/private hosts
+    hostname = parsed.hostname.lower()
+    blocked_hosts = {
+        "localhost", "0.0.0.0", "metadata.google.internal",
+        "169.254.169.254",  # AWS/GCP metadata
+    }
+    if hostname in blocked_hosts:
+        raise HTTPException(status_code=400, detail="URL host is not allowed.")
+
+    if _is_disallowed_host(parsed.hostname):
+        raise HTTPException(status_code=400, detail="URL host is not allowed.")
+
+
+async def _resolve_media_url(
+    url: str, media_type: str
+) -> tuple[str, dict]:
+    """
+    Resolve a media URL to a local temp file.
+    Handles both direct media URLs and YouTube URLs.
+
+    Args:
+        url: The media URL
+        media_type: 'audio' or 'video'
+
+    Returns:
+        Tuple of (temp_file_path, url_metadata)
+    """
+    _validate_url(url)
+
+    temp_paths = []  # Track all temp files for cleanup on error
+
+    try:
+        if is_youtube_url(url):
+            # YouTube: use yt-dlp
+            raw_path, url_meta = await extract_youtube_stream(url, media_type)
+            temp_paths.append(raw_path)
+        else:
+            # Direct URL: stream download
+            raw_path, url_meta = await stream_download_media(url, media_type)
+            temp_paths.append(raw_path)
+
+        # Check duration with ffprobe if available
+        duration = await get_media_duration(raw_path)
+        if duration and duration > MAX_DURATION_SECONDS:
+            cleanup_temp_files(*temp_paths)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Media duration ({int(duration)}s) exceeds limit "
+                       f"({MAX_DURATION_SECONDS}s)."
+            )
+
+        # Sample with ffmpeg (first 20 seconds only)
+        sampled_path = await ffmpeg_sample_media(raw_path, media_type)
+        if sampled_path != raw_path:
+            temp_paths.append(sampled_path)
+            # We can clean up the raw file now
+            cleanup_temp_files(raw_path)
+            temp_paths.remove(raw_path)
+            return sampled_path, url_meta
+        else:
+            return raw_path, url_meta
+
+    except HTTPException:
+        cleanup_temp_files(*temp_paths)
+        raise
+    except ValueError as e:
+        cleanup_temp_files(*temp_paths)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        cleanup_temp_files(*temp_paths)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process media URL: {str(e)}"
+        )
+
+
 async def _download_media_url(
     url: str,
     expected_prefix: str,
@@ -141,7 +247,13 @@ async def root():
     return {
         "status": "operational",
         "service": "MDRS Backend",
-        "version": "1.0.0",
+        "version": "1.1.0",
+        "features": {
+            "url_ingestion": True,
+            "youtube_support": True,
+            "newsapi_verification": newsapi_client.is_available(),
+            "gemini_ai": True,
+        },
         "disclaimer": "This system provides probabilistic risk assessment and does not determine truth."
     }
 
@@ -157,6 +269,7 @@ async def analyze_image(
     Analyze an uploaded image for deception risk signals.
     
     Returns risk score, signals, and explainable recommendations.
+    Now also cross-references with NewsAPI if context is provided.
     """
     try:
         # Validate file type
@@ -177,11 +290,20 @@ async def analyze_image(
                 'context': context
             })
             
+            # NewsAPI: cross-reference image context if provided
+            newsapi_result = None
+            if context and newsapi_client.is_available():
+                try:
+                    newsapi_result = await newsapi_client.verify_claim(context)
+                except Exception as e:
+                    print(f"NewsAPI image context check error: {e}")
+
             # Calculate risk score (async)
             result = await risk_engine.calculate_risk(
                 modality='image',
                 signals=signals,
-                metadata={'source': source, 'timestamp': timestamp, 'context': context}
+                metadata={'source': source, 'timestamp': timestamp, 'context': context},
+                newsapi_result=newsapi_result,
             )
             
             return JSONResponse(content=result)
@@ -203,16 +325,20 @@ async def analyze_video(
     context: Optional[str] = Form(None)
 ):
     """
-    Analyze an uploaded video for deception risk signals.
+    Analyze a video for deception risk signals.
     
+    Accepts EITHER a file upload OR a URL (direct media link or YouTube).
     Checks for facial artifacts, lighting inconsistencies, and temporal anomalies.
     """
+    tmp_path = None
+    url_meta = None
+
     try:
         if file and url:
             raise HTTPException(status_code=400, detail="Provide either a video file or URL, not both.")
 
         if url:
-            tmp_path = await _download_media_url(url, "video/", VIDEO_EXTENSIONS, ".mp4")
+            tmp_path, url_meta = await _resolve_media_url(url, "video")
         elif file:
             if not file.content_type or not file.content_type.startswith('video/'):
                 raise HTTPException(status_code=400, detail="Invalid file type. Expected video.")
@@ -223,7 +349,7 @@ async def analyze_video(
         try:
             # Run detection
             signals = video_detector.detect(tmp_path, {
-                'source': source,
+                'source': source or (url_meta.get('source_url') if url_meta else None),
                 'timestamp': timestamp,
                 'context': context
             })
@@ -232,16 +358,35 @@ async def analyze_video(
             result = await risk_engine.calculate_risk(
                 modality='video',
                 signals=signals,
-                metadata={'source': source, 'timestamp': timestamp, 'context': context}
+                metadata={
+                    'source': source,
+                    'timestamp': timestamp,
+                    'context': context,
+                    'url_metadata': url_meta,
+                }
             )
+
+            # Add URL metadata to result if applicable
+            if url_meta:
+                result['url_metadata'] = {
+                    'source_url': url_meta.get('source_url'),
+                    'source_type': url_meta.get('source_type', 'direct'),
+                    'title': url_meta.get('title'),
+                    'file_size_mb': url_meta.get('file_size_mb'),
+                }
             
             return JSONResponse(content=result)
         
         finally:
             # Cleanup
-            os.unlink(tmp_path)
+            if tmp_path:
+                cleanup_temp_files(tmp_path)
     
+    except HTTPException:
+        raise
     except Exception as e:
+        if tmp_path:
+            cleanup_temp_files(tmp_path)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
@@ -254,16 +399,20 @@ async def analyze_audio(
     context: Optional[str] = Form(None)
 ):
     """
-    Analyze an uploaded audio file for deception risk signals.
+    Analyze an audio file for deception risk signals.
     
+    Accepts EITHER a file upload OR a URL (direct media link or YouTube).
     Checks for spectral anomalies, voice synthesis artifacts, and phoneme inconsistencies.
     """
+    tmp_path = None
+    url_meta = None
+
     try:
         if file and url:
             raise HTTPException(status_code=400, detail="Provide either an audio file or URL, not both.")
 
         if url:
-            tmp_path = await _download_media_url(url, "audio/", AUDIO_EXTENSIONS, ".mp3")
+            tmp_path, url_meta = await _resolve_media_url(url, "audio")
         elif file:
             if not file.content_type or not file.content_type.startswith('audio/'):
                 raise HTTPException(status_code=400, detail="Invalid file type. Expected audio.")
@@ -274,7 +423,7 @@ async def analyze_audio(
         try:
             # Run detection
             signals = audio_detector.detect(tmp_path, {
-                'source': source,
+                'source': source or (url_meta.get('source_url') if url_meta else None),
                 'timestamp': timestamp,
                 'context': context
             })
@@ -283,16 +432,35 @@ async def analyze_audio(
             result = await risk_engine.calculate_risk(
                 modality='audio',
                 signals=signals,
-                metadata={'source': source, 'timestamp': timestamp, 'context': context}
+                metadata={
+                    'source': source,
+                    'timestamp': timestamp,
+                    'context': context,
+                    'url_metadata': url_meta,
+                }
             )
+
+            # Add URL metadata to result if applicable
+            if url_meta:
+                result['url_metadata'] = {
+                    'source_url': url_meta.get('source_url'),
+                    'source_type': url_meta.get('source_type', 'direct'),
+                    'title': url_meta.get('title'),
+                    'file_size_mb': url_meta.get('file_size_mb'),
+                }
             
             return JSONResponse(content=result)
         
         finally:
             # Cleanup
-            os.unlink(tmp_path)
+            if tmp_path:
+                cleanup_temp_files(tmp_path)
     
+    except HTTPException:
+        raise
     except Exception as e:
+        if tmp_path:
+            cleanup_temp_files(tmp_path)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
@@ -307,6 +475,7 @@ async def analyze_text(
     Analyze text content for deception risk signals.
     
     Checks for sensational language, stylometric anomalies, and misinformation patterns.
+    Now also cross-references claims against NewsAPI news sources.
     """
     try:
         if not text or len(text.strip()) == 0:
@@ -318,12 +487,21 @@ async def analyze_text(
             'timestamp': timestamp,
             'context': context
         })
+
+        # NewsAPI: cross-reference text claims against news sources
+        newsapi_result = None
+        if newsapi_client.is_available():
+            try:
+                newsapi_result = await newsapi_client.verify_claim(text)
+            except Exception as e:
+                print(f"NewsAPI text verification error: {e}")
         
         # Calculate risk score (async)
         result = await risk_engine.calculate_risk(
             modality='text',
             signals=signals,
-            metadata={'source': source, 'timestamp': timestamp, 'context': context}
+            metadata={'source': source, 'timestamp': timestamp, 'context': context},
+            newsapi_result=newsapi_result,
         )
         
         return JSONResponse(content=result)

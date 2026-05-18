@@ -2,7 +2,7 @@
 Risk Scoring Engine
 Transparent, weighted aggregation of signals into a risk score (0-100)
 """
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import math
 import asyncio
 from gemini_client import gemini_client
@@ -57,7 +57,13 @@ class RiskScoringEngine:
         'high': 100
     }
     
-    async def calculate_risk(self, modality: str, signals: List[Dict[str, Any]], metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def calculate_risk(
+        self,
+        modality: str,
+        signals: List[Dict[str, Any]],
+        metadata: Dict[str, Any] = None,
+        newsapi_result: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Calculate risk score from detected signals.
         
@@ -65,12 +71,17 @@ class RiskScoringEngine:
             modality: Type of media (image, video, audio, text)
             signals: List of detected signals with confidence scores
             metadata: Optional context (source, timestamp, etc.)
+            newsapi_result: Optional NewsAPI verification result
         
         Returns:
             Risk assessment with score, level, explanation, and recommendations
         """
         if not signals:
-            return self._generate_low_risk_response(modality)
+            result = self._generate_low_risk_response(modality)
+            # Even with no signals, include NewsAPI data if available
+            if newsapi_result:
+                result['newsapi_verification'] = newsapi_result
+            return result
         
         # Get weights for this modality
         weights = self.WEIGHTS.get(modality, {})
@@ -142,18 +153,75 @@ class RiskScoringEngine:
                         risk_level = self._determine_risk_level(risk_score)
             except Exception as e:
                 print(f"Gemini analysis error: {e}")
-        
+
+        # ── NewsAPI credibility adjustment ────────────────────────────
+        newsapi_signals = []
+        if newsapi_result and newsapi_result.get("newsapi_available"):
+            credibility_score = newsapi_result.get("credibility_score")
+            credibility_level = newsapi_result.get("credibility_level", "Medium")
+            corroborating_sources = newsapi_result.get("corroborating_sources", 0)
+
+            if credibility_score is not None:
+                # Low credibility (no corroboration) → INCREASE deception risk
+                if credibility_score < 40:
+                    news_contribution = 12.0
+                    newsapi_signals.append({
+                        'signal': 'newsapi_low_credibility',
+                        'description': (
+                            f'NewsAPI found low corroboration: {corroborating_sources} source(s). '
+                            f'{newsapi_result.get("credibility_reasoning", "")}'
+                        ),
+                        'confidence': 0.65,
+                        'weight': 0.15,
+                        'contribution': news_contribution,
+                        'evidence': {
+                            'source': 'NewsAPI.org',
+                            'credibility_score': credibility_score,
+                            'corroborating_sources': corroborating_sources,
+                        }
+                    })
+                    total_score += news_contribution
+                    signal_contributions.extend(newsapi_signals)
+                    risk_score = min(100, round(total_score))
+                    risk_level = self._determine_risk_level(risk_score)
+
+                # High credibility (many sources confirm) → can LOWER deception risk slightly
+                elif credibility_score >= 70:
+                    # Reduce risk modestly — corroboration is a positive signal
+                    reduction = min(10, risk_score * 0.1)
+                    total_score = max(0, total_score - reduction)
+                    newsapi_signals.append({
+                        'signal': 'newsapi_high_credibility',
+                        'description': (
+                            f'NewsAPI corroboration strong: {corroborating_sources} independent source(s) '
+                            f'confirm related coverage. '
+                            f'{newsapi_result.get("credibility_reasoning", "")}'
+                        ),
+                        'confidence': 0.70,
+                        'weight': 0.10,
+                        'contribution': round(-reduction, 2),
+                        'evidence': {
+                            'source': 'NewsAPI.org',
+                            'credibility_score': credibility_score,
+                            'corroborating_sources': corroborating_sources,
+                        }
+                    })
+                    signal_contributions.extend(newsapi_signals)
+                    risk_score = min(100, max(0, round(total_score)))
+                    risk_level = self._determine_risk_level(risk_score)
+
         # Compile result
         result = {
             'risk_score': risk_score,
             'risk_level': risk_level,
             'modality': modality,
-            'signals_detected': len(signals) + len(gemini_signals),
+            'signals_detected': len(signals) + len(gemini_signals) + len(newsapi_signals),
             'signal_breakdown': signal_contributions,
             'explanation': explanation,
             'recommendation': recommendation,
             'gemini_analysis': gemini_analysis.get('gemini_analysis') if gemini_analysis else None,
             'gemini_verified': gemini_analysis is not None,
+            'newsapi_verification': newsapi_result if newsapi_result else None,
             'disclaimer': 'This is a probabilistic risk assessment. Human verification is essential for decision-making.',
             'timestamp': metadata.get('timestamp') if metadata else None,
             'source': metadata.get('source') if metadata else None

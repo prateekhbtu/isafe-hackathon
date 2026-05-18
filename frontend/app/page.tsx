@@ -81,8 +81,8 @@ export default function Home() {
                 <div className="hero-stat-label">Modalities</div>
               </div>
               <div className="hero-stat">
-                <div className="hero-stat-value">15+</div>
-                <div className="hero-stat-label">Signals</div>
+                <div className="hero-stat-value">150K+</div>
+                <div className="hero-stat-label">News Sources</div>
               </div>
               <div className="hero-stat">
                 <div className="hero-stat-value">AI</div>
@@ -156,6 +156,15 @@ export default function Home() {
             </div>
 
             <div className="feature-card">
+              <div className="feature-icon">📰</div>
+              <h3 className="feature-title">News Source Cross-Check</h3>
+              <p className="feature-desc">
+                Powered by NewsAPI.org — cross-references claims against 150,000+
+                news sources to verify credibility and find corroborating evidence.
+              </p>
+            </div>
+
+            <div className="feature-card">
               <div className="feature-icon">📊</div>
               <h3 className="feature-title">Explainable Risk Scores</h3>
               <p className="feature-desc">
@@ -181,10 +190,10 @@ export default function Home() {
           <div className="steps-container">
             <div className="step-card">
               <div className="step-number">1</div>
-              <h3 className="step-title">Upload Media</h3>
+              <h3 className="step-title">Upload or Paste URL</h3>
               <p className="step-desc">
-                Select an image, video, audio file, or paste text content along with
-                optional metadata like source and context.
+                Upload files, paste a URL (YouTube or direct link) for audio/video,
+                or enter text — along with optional metadata like source and context.
               </p>
             </div>
 
@@ -244,6 +253,10 @@ export default function Home() {
             <div className="tech-item">
               <div className="tech-icon">📊</div>
               <div className="tech-name">SciPy</div>
+            </div>
+            <div className="tech-item">
+              <div className="tech-icon">📰</div>
+              <div className="tech-name">NewsAPI</div>
             </div>
             <div className="tech-item">
               <div className="tech-icon">💬</div>

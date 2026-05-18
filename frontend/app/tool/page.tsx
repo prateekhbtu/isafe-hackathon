@@ -43,6 +43,34 @@ interface Recommendation {
   human_review_required: boolean
 }
 
+interface NewsArticle {
+  source: { name: string }
+  title: string
+  description: string
+  url: string
+  publishedAt: string
+}
+
+interface NewsAPIVerification {
+  newsapi_available: boolean
+  credibility_score: number | null
+  credibility_level?: string
+  credibility_reasoning?: string
+  corroborating_sources?: number
+  total_related_articles?: number
+  headline_matches?: number
+  top_sources?: string[]
+  sample_articles?: NewsArticle[]
+  queries_tried?: Array<{ query: string; results_found: number }>
+}
+
+interface URLMetadata {
+  source_url?: string
+  source_type?: string
+  title?: string
+  file_size_mb?: number
+}
+
 interface AnalysisResult {
   risk_score: number
   risk_level: string
@@ -53,6 +81,8 @@ interface AnalysisResult {
   recommendation: Recommendation
   gemini_analysis?: string
   gemini_verified?: boolean
+  newsapi_verification?: NewsAPIVerification
+  url_metadata?: URLMetadata
   disclaimer: string
   timestamp: string | null
   source: string | null
@@ -65,10 +95,21 @@ const modalityConfig = {
   text: { icon: '📝', label: 'Text', accept: '' },
 }
 
+// Simple URL validation
+const isValidUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export default function ToolPage() {
   const [activeTab, setActiveTab] = useState<Modality>('image')
   const [file, setFile] = useState<File | null>(null)
   const [mediaUrl, setMediaUrl] = useState('')
+  const [urlError, setUrlError] = useState<string | null>(null)
   const [textContent, setTextContent] = useState('')
   const [source, setSource] = useState('')
   const [timestamp, setTimestamp] = useState('')
@@ -81,6 +122,7 @@ export default function ToolPage() {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
       setMediaUrl('')
+      setUrlError(null)
       setError(null)
     }
   }
@@ -101,14 +143,23 @@ export default function ToolPage() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setFile(e.dataTransfer.files[0])
       setMediaUrl('')
+      setUrlError(null)
       setError(null)
     }
   }
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMediaUrl(e.target.value)
+    const val = e.target.value
+    setMediaUrl(val)
     if (file) setFile(null)
     setError(null)
+
+    // Real-time URL validation
+    if (val.trim() && !isValidUrl(val.trim())) {
+      setUrlError('Please enter a valid URL starting with http:// or https://')
+    } else {
+      setUrlError(null)
+    }
   }
 
   const handleAnalyze = async () => {
@@ -129,6 +180,11 @@ export default function ToolPage() {
       } else if (activeTab === 'audio' || activeTab === 'video') {
         if (!file && !mediaUrl.trim()) {
           setError(`Please select a ${activeTab} file or paste a URL to analyze`)
+          setLoading(false)
+          return
+        }
+        if (mediaUrl.trim() && !isValidUrl(mediaUrl.trim())) {
+          setError('Please enter a valid URL')
           setLoading(false)
           return
         }
@@ -158,6 +214,7 @@ export default function ToolPage() {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: 120000, // 2 min timeout for URL processing
         }
       )
 
@@ -173,6 +230,7 @@ export default function ToolPage() {
   const resetForm = () => {
     setFile(null)
     setMediaUrl('')
+    setUrlError(null)
     setTextContent('')
     setSource('')
     setTimestamp('')
@@ -185,9 +243,19 @@ export default function ToolPage() {
     if (loading) return true
     if (activeTab === 'text') return !textContent.trim()
     if (activeTab === 'audio' || activeTab === 'video') {
+      if (mediaUrl.trim() && !isValidUrl(mediaUrl.trim())) return true
       return !file && !mediaUrl.trim()
     }
     return !file
+  }
+
+  const getCredibilityColor = (level?: string) => {
+    switch (level) {
+      case 'High': return 'var(--accent-secondary)'
+      case 'Medium': return '#ea580c'
+      case 'Low': return 'var(--accent-primary)'
+      default: return 'var(--text-tertiary)'
+    }
   }
 
   return (
@@ -224,7 +292,7 @@ export default function ToolPage() {
               <div className="tool-header">
                 <h1 className="tool-title">Analyze Media</h1>
                 <p className="tool-subtitle">
-                  Upload content to assess deception risk with explainable AI
+                  Upload content or paste a URL to assess deception risk with explainable AI
                 </p>
               </div>
 
@@ -240,6 +308,7 @@ export default function ToolPage() {
                           setActiveTab(modality)
                           setFile(null)
                           setMediaUrl('')
+                          setUrlError(null)
                           setTextContent('')
                           setError(null)
                         }}
@@ -301,17 +370,36 @@ export default function ToolPage() {
                     </div>
                   )}
 
+                  {/* URL Input for Audio/Video */}
                   {(activeTab === 'audio' || activeTab === 'video') && (
-                    <div className="text-input-area">
-                      <input
-                        type="url"
-                        className="metadata-input"
-                        value={mediaUrl}
-                        onChange={handleUrlChange}
-                        placeholder={`Paste ${activeTab} URL (https://...)`}
-                      />
-                      <p className="upload-hint">
-                        Provide a direct link to a supported file (mp3, mp4, mkv, etc.).
+                    <div className="url-input-section">
+                      <div className="url-divider">
+                        <span className="url-divider-line" />
+                        <span className="url-divider-text">OR</span>
+                        <span className="url-divider-line" />
+                      </div>
+                      <div className="url-input-wrapper">
+                        <div className="url-input-icon">
+                          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                        </div>
+                        <input
+                          type="url"
+                          className={`url-input ${urlError ? 'url-input-error' : ''} ${mediaUrl && !urlError ? 'url-input-valid' : ''}`}
+                          value={mediaUrl}
+                          onChange={handleUrlChange}
+                          placeholder={`Paste ${activeTab} URL (YouTube, direct link...)`}
+                        />
+                        {mediaUrl && !urlError && (
+                          <div className="url-valid-icon">✓</div>
+                        )}
+                      </div>
+                      {urlError && (
+                        <p className="url-error-text">{urlError}</p>
+                      )}
+                      <p className="upload-hint" style={{ marginTop: '8px' }}>
+                        Supports direct media links (.mp4, .mp3, .wav) and YouTube URLs
                       </p>
                     </div>
                   )}
@@ -358,7 +446,7 @@ export default function ToolPage() {
                     {loading ? (
                       <>
                         <div className="loading-spinner" />
-                        Analyzing...
+                        {mediaUrl ? 'Fetching & Analyzing...' : 'Analyzing...'}
                       </>
                     ) : (
                       <>
@@ -385,6 +473,30 @@ export default function ToolPage() {
           ) : (
             /* Results Section */
             <div className="results-container">
+              {/* URL Source Info */}
+              {result.url_metadata && (
+                <div className="url-source-card">
+                  <div className="card-header">
+                    <div className="card-icon">🔗</div>
+                    <h3 className="card-title">Source URL Info</h3>
+                    <span className="source-type-badge">
+                      {result.url_metadata.source_type === 'youtube' ? '▶ YouTube' : '🌐 Direct'}
+                    </span>
+                  </div>
+                  <div className="url-source-details">
+                    {result.url_metadata.title && (
+                      <p className="url-source-title">{result.url_metadata.title}</p>
+                    )}
+                    <p className="url-source-url">{result.url_metadata.source_url}</p>
+                    {result.url_metadata.file_size_mb && (
+                      <span className="url-source-size">
+                        {result.url_metadata.file_size_mb} MB processed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Risk Score Card */}
               <div className="risk-score-card">
                 <p className="risk-score-label">Deception Risk Score</p>
@@ -428,6 +540,86 @@ export default function ToolPage() {
                 </div>
               )}
 
+              {/* NewsAPI Verification Card */}
+              {result.newsapi_verification && result.newsapi_verification.newsapi_available && result.newsapi_verification.credibility_score !== null && (
+                <div className="explanation-card newsapi-card">
+                  <div className="card-header">
+                    <div className="card-icon">📰</div>
+                    <h3 className="card-title">News Source Verification</h3>
+                    <span
+                      className="newsapi-badge"
+                      style={{ background: getCredibilityColor(result.newsapi_verification.credibility_level) }}
+                    >
+                      {result.newsapi_verification.credibility_level} Credibility
+                    </span>
+                  </div>
+
+                  <div className="newsapi-score-row">
+                    <div className="newsapi-stat">
+                      <span className="newsapi-stat-value">
+                        {result.newsapi_verification.credibility_score}
+                      </span>
+                      <span className="newsapi-stat-label">Credibility Score</span>
+                    </div>
+                    <div className="newsapi-stat">
+                      <span className="newsapi-stat-value">
+                        {result.newsapi_verification.corroborating_sources || 0}
+                      </span>
+                      <span className="newsapi-stat-label">Sources Found</span>
+                    </div>
+                    <div className="newsapi-stat">
+                      <span className="newsapi-stat-value">
+                        {result.newsapi_verification.total_related_articles || 0}
+                      </span>
+                      <span className="newsapi-stat-label">Related Articles</span>
+                    </div>
+                    <div className="newsapi-stat">
+                      <span className="newsapi-stat-value">
+                        {result.newsapi_verification.headline_matches || 0}
+                      </span>
+                      <span className="newsapi-stat-label">Headline Matches</span>
+                    </div>
+                  </div>
+
+                  {result.newsapi_verification.credibility_reasoning && (
+                    <p className="newsapi-reasoning">
+                      {result.newsapi_verification.credibility_reasoning}
+                    </p>
+                  )}
+
+                  {result.newsapi_verification.top_sources && result.newsapi_verification.top_sources.length > 0 && (
+                    <div className="newsapi-sources">
+                      <p className="newsapi-sources-label">Corroborating Sources:</p>
+                      <div className="newsapi-source-tags">
+                        {result.newsapi_verification.top_sources.map((src, i) => (
+                          <span key={i} className="newsapi-source-tag">{src}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {result.newsapi_verification.sample_articles && result.newsapi_verification.sample_articles.length > 0 && (
+                    <div className="newsapi-articles">
+                      <p className="newsapi-sources-label">Related Articles:</p>
+                      {result.newsapi_verification.sample_articles.slice(0, 3).map((article, i) => (
+                        <a
+                          key={i}
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="newsapi-article-link"
+                        >
+                          <span className="newsapi-article-source">
+                            {article.source?.name}
+                          </span>
+                          <span className="newsapi-article-title">{article.title}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Signal Breakdown */}
               {result.signal_breakdown.length > 0 && (
                 <div className="signals-card">
@@ -438,7 +630,10 @@ export default function ToolPage() {
                   {result.signal_breakdown.map((signal, index) => (
                     <div key={index} className="signal-item">
                       <div className="signal-header">
-                        <span className="signal-type">{signal.signal.replace(/_/g, ' ')}</span>
+                        <span className="signal-type">
+                          {signal.signal.startsWith('newsapi_') ? '📰 ' : ''}
+                          {signal.signal.replace(/_/g, ' ')}
+                        </span>
                         <span className="confidence-badge">
                           {(signal.confidence * 100).toFixed(0)}% Confidence
                         </span>
