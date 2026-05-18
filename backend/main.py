@@ -13,6 +13,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 import mimetypes
 import httpx
+import ipaddress
+import socket
 
 from risk_engine import RiskScoringEngine
 from detectors.image_detector import ImageDetector
@@ -60,10 +62,48 @@ async def _save_upload_file(file: UploadFile) -> str:
         return tmp_file.name
 
 
+def _is_disallowed_host(hostname: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(hostname)
+        return (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        )
+    except ValueError:
+        try:
+            resolved = socket.getaddrinfo(hostname, None)
+        except socket.gaierror:
+            return True
+
+        for entry in resolved:
+            ip = ipaddress.ip_address(entry[4][0])
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                return True
+
+    return False
+
+
 async def _download_media_url(url: str, expected_prefix: str, allowed_extensions: set[str]) -> str:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"}:
         raise HTTPException(status_code=400, detail="URL must start with http:// or https://")
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="URL must include a valid host.")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="URL must not include credentials.")
+    if _is_disallowed_host(parsed.hostname):
+        raise HTTPException(status_code=400, detail="URL host is not allowed.")
 
     try:
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
@@ -78,19 +118,22 @@ async def _download_media_url(url: str, expected_prefix: str, allowed_extensions
     if content_type:
         if not content_type.startswith(expected_prefix):
             raise HTTPException(status_code=400, detail=f"Invalid media type. Expected {expected_prefix} content.")
-    elif url_suffix:
-        if url_suffix not in allowed_extensions:
-            raise HTTPException(status_code=400, detail="Unable to determine media type from URL.")
+        guessed_suffix = mimetypes.guess_extension(content_type) or ''
     else:
-        raise HTTPException(status_code=400, detail="Unable to determine media type from URL.")
+        guessed_suffix = ''
+        if not url_suffix or url_suffix not in allowed_extensions:
+            raise HTTPException(status_code=400, detail="Unable to determine media type from URL.")
 
     if not response.content:
         raise HTTPException(status_code=400, detail="Media URL returned empty content.")
 
-    if not url_suffix and content_type:
-        url_suffix = mimetypes.guess_extension(content_type) or ''
+    safe_suffix = ''
+    if guessed_suffix in allowed_extensions:
+        safe_suffix = guessed_suffix
+    elif url_suffix in allowed_extensions:
+        safe_suffix = url_suffix
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=url_suffix) as tmp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=safe_suffix) as tmp_file:
         tmp_file.write(response.content)
         return tmp_file.name
 
