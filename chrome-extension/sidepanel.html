@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MDRS Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="sp-header">
+      <div class="sp-logo">
+        <div class="sp-logo-icon">M</div>
+        <span class="sp-logo-text">MDRS</span>
+      </div>
+      <span class="sp-badge">Extension</span>
+    </header>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="sp-empty">
+      <div class="sp-empty-icon">🛡️</div>
+      <h2 class="sp-empty-title">Ready to Scan</h2>
+      <p class="sp-empty-desc">
+        Select text on any webpage and click <strong>Scan</strong>, or right-click on any image, audio, or video to analyze it for deception.
+      </p>
+      <div class="sp-empty-steps">
+        <div class="sp-step">
+          <span class="sp-step-num">1</span>
+          <span>Select text or right-click media</span>
+        </div>
+        <div class="sp-step">
+          <span class="sp-step-num">2</span>
+          <span>Click "Scan" or use context menu</span>
+        </div>
+        <div class="sp-step">
+          <span class="sp-step-num">3</span>
+          <span>View risk assessment here</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="sp-loading" style="display:none">
+      <div class="sp-loading-anim">
+        <div class="sp-pulse-ring"></div>
+        <div class="sp-pulse-ring sp-pulse-ring-2"></div>
+        <div class="sp-pulse-dot"></div>
+      </div>
+      <h3 class="sp-loading-title">Analyzing<span class="sp-dots"></span></h3>
+      <p class="sp-loading-subtitle" id="loading-detail">Processing content...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="sp-error-state" style="display:none">
+      <div class="sp-error-icon">⚠️</div>
+      <h3 class="sp-error-title">Analysis Failed</h3>
+      <p class="sp-error-msg" id="error-message">Something went wrong.</p>
+      <button class="sp-btn sp-btn-secondary" onclick="resetToEmpty()">Try Again</button>
+    </div>
+
+    <!-- Results -->
+    <div id="results-state" style="display:none">
+      <!-- Modality Badge -->
+      <div class="sp-modality-row" id="modality-row">
+        <span class="sp-modality-badge" id="modality-badge">📝 Text</span>
+        <span class="sp-source-text" id="source-text"></span>
+      </div>
+
+      <!-- Risk Score Card -->
+      <div class="sp-risk-card" id="risk-card">
+        <div class="sp-risk-ring-container">
+          <svg class="sp-risk-ring" viewBox="0 0 120 120">
+            <circle class="sp-risk-ring-bg" cx="60" cy="60" r="50" />
+            <circle class="sp-risk-ring-fill" id="risk-ring-fill" cx="60" cy="60" r="50" />
+          </svg>
+          <div class="sp-risk-score" id="risk-score">0</div>
+        </div>
+        <div class="sp-risk-info">
+          <span class="sp-risk-badge" id="risk-badge">Low Risk</span>
+          <p class="sp-risk-count" id="risk-count">0 signals detected</p>
+        </div>
+      </div>
+
+      <!-- Explanation -->
+      <div class="sp-card" id="explanation-card">
+        <div class="sp-card-header">
+          <span class="sp-card-icon">📊</span>
+          <span class="sp-card-title">Analysis</span>
+        </div>
+        <p class="sp-card-body" id="explanation-text"></p>
+      </div>
+
+      <!-- AI Verification -->
+      <div class="sp-card sp-card-gemini" id="gemini-card" style="display:none">
+        <div class="sp-card-header">
+          <span class="sp-card-icon">🤖</span>
+          <span class="sp-card-title">AI Verification</span>
+          <span class="sp-verified-tag" id="gemini-tag">Verified</span>
+        </div>
+        <div class="sp-card-body" id="gemini-text"></div>
+      </div>
+
+      <!-- NewsAPI Verification -->
+      <div class="sp-card sp-card-news" id="newsapi-card" style="display:none">
+        <div class="sp-card-header">
+          <span class="sp-card-icon">📰</span>
+          <span class="sp-card-title">News Verification</span>
+          <span class="sp-news-badge" id="news-badge">—</span>
+        </div>
+        <div class="sp-news-stats" id="news-stats"></div>
+        <p class="sp-news-reasoning" id="news-reasoning"></p>
+        <div class="sp-news-sources" id="news-sources"></div>
+        <div class="sp-news-articles" id="news-articles"></div>
+      </div>
+
+      <!-- Signals -->
+      <div class="sp-card" id="signals-card" style="display:none">
+        <div class="sp-card-header">
+          <span class="sp-card-icon">🔍</span>
+          <span class="sp-card-title">Detected Signals</span>
+        </div>
+        <div id="signals-list"></div>
+      </div>
+
+      <!-- Recommendation -->
+      <div class="sp-card" id="recommendation-card">
+        <div class="sp-card-header">
+          <span class="sp-card-icon">💡</span>
+          <span class="sp-card-title">Recommendation</span>
+        </div>
+        <div class="sp-rec-action" id="rec-action"></div>
+        <ul class="sp-rec-steps" id="rec-steps"></ul>
+        <div class="sp-human-review" id="human-review" style="display:none">
+          ⚠ Human Review Required
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="sp-disclaimer" id="disclaimer-text"></div>
+
+      <!-- Scan Again -->
+      <button class="sp-btn sp-btn-full" onclick="resetToEmpty()">
+        Scan Another Selection
+      </button>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
