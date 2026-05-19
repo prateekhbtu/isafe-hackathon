@@ -2,188 +2,229 @@
 
 <div align="center">
 
-![MDRS Logo](https://img.shields.io/badge/MDRS-AI%20Assisted%20Triage-blueviolet?style=for-the-badge)
+![MDRS Logo](https://img.shields.io/badge/MDRS-Explainable%20Risk%20Scoring-1f6feb?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=for-the-badge&logo=fastapi)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**Explainable, Probabilistic Media Authenticity Assessment**
+Explainable, probabilistic media authenticity assessment for image, video, audio, and text.
 
-[Features](#-features) • [Architecture](#-architecture) • [Setup](#-quick-start) • [Usage](#-usage) • [Ethics](#-ethical-considerations)
+[Features](#features) | [Architecture](#architecture) | [Chrome-extension](#chrome-extension) | [Quick-start](#quick-start) | [Usage](#usage) | [Ethical-considerations](#ethical-considerations)
 
 </div>
 
 ---
 
-## 🎯 Overview
+## Overview
 
-**MDRS (Multimodal Deception Risk Scorer)** is a hackathon-ready web application for policy demos and rapid prototyping. It provides **probabilistic risk assessment** for images, videos, audio, and text—**never** making binary "real vs. fake" claims.
+MDRS (Multimodal Deception Risk Scorer) delivers probabilistic authenticity risk scores with transparent signals, confidence values, and reviewer guidance. The platform is designed for production usage with a stateless API tier, pluggable detectors, and an optional browser extension for in-context triage on any web page.
 
-### 🌟 Key Principles
+Key principles:
 
-- ✅ **Probabilistic, not definitive** - Risk scores (0-100), not verdicts
-- ✅ **Explainable** - Every score shows contributing signals
-- ✅ **Human-in-the-loop** - Supports decisions, doesn't replace them
-- ✅ **Transparent** - Configurable weights, visible logic
-- ✅ **Ethical** - No surveillance, no automated takedowns
-
----
-
-## 🚀 Features
-
-### Core Capabilities
-
-| Modality | Detection Signals | Technology |
-|----------|------------------|------------|
-| **Image** | Manipulation artifacts, metadata anomalies, compression patterns | PIL + Heuristics |
-| **Video** | Facial warping, lighting inconsistencies, temporal anomalies | File analysis + Simulated ML |
-| **Audio** | Spectral anomalies, voice synthesis artifacts, phoneme patterns | Signal processing heuristics |
-| **Text** | Sensational language, stylometric drift, emotional manipulation | NLP pattern matching |
-
-### Unique Features
-
-1. **Cross-Modal Consistency Checking** (Future: Audio-visual sync, emotion-text alignment)
-2. **Risk Triage Categories**: Low / Medium / High with actionable recommendations
-3. **Evidence Visualization**: Heatmaps, confidence scores, signal breakdowns
-4. **Metadata Contextualization**: Source credibility, timestamp verification
-5. **Direct Media Links**: Analyze audio/video from hosted URLs (no upload required)
+- Probabilistic, not definitive: risk scores in the 0-100 range
+- Explainable: evidence signals and weighted contributions are visible
+- Human-in-the-loop: output is advisory and designed for review workflows
+- Transparent: scoring weights and thresholds are configurable
+- Privacy-first: no tracking or surveillance logic in the core system
 
 ---
 
-## 🏗️ Architecture
+## Features
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Frontend (Next.js)                     │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
-│  │  Image  │  │  Video  │  │  Audio  │  │   Text  │        │
-│  │ Upload  │  │ Upload/ │  │ Upload/ │  │  Input  │        │
-│  │         │  │  URL    │  │  URL    │  │         │        │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘        │
-│       │            │            │            │              │
-│       └────────────┴────────────┴────────────┘              │
-│                        │                                     │
-│                        ▼                                     │
-│             Results Dashboard + Explainability              │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            │ HTTP REST API
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend (FastAPI)                         │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              API Endpoints Layer                      │   │
-│  │  /analyze/image  /analyze/video  /analyze/audio      │   │
-│  │                 /analyze/text                         │   │
-│  └────────────────────┬─────────────────────────────────┘   │
-│                       │                                      │
-│                       ▼                                      │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │           Detection Modules                          │    │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │    │
-│  │  │  Image   │ │  Video   │ │  Audio   │ │  Text  │ │    │
-│  │  │ Detector │ │ Detector │ │ Detector │ │Detector│ │    │
-│  │  └──────────┘ └──────────┘ └──────────┘ └────────┘ │    │
-│  └────────────────────┬─────────────────────────────────┘   │
-│                       │ Signals List                         │
-│                       ▼                                      │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │          Risk Scoring Engine                          │   │
-│  │  • Weighted aggregation                               │   │
-│  │  • Threshold categorization (Low/Med/High)           │   │
-│  │  • Explanation generation                             │   │
-│  │  • Recommendation mapping                             │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                       │                                      │
-│                       ▼                                      │
-│             JSON Response with Risk Assessment               │
-└─────────────────────────────────────────────────────────────┘
-```
+Core capabilities:
 
-### Technology Stack
+- Image: manipulation artifacts, metadata anomalies, compression patterns
+- Video: temporal inconsistencies, lighting anomalies, face distortion cues
+- Audio: spectral anomalies, synthesis artifacts, phoneme irregularities
+- Text: sensational language, stylometric drift, emotional manipulation cues
 
-**Backend:**
-- FastAPI (Python 3.9+)
-- PIL/Pillow for image processing
-- Lightweight heuristics (production-ready placeholders for ML models)
+Operational features:
 
-**Frontend:**
-- Next.js 14 (React + TypeScript)
-- Axios for API calls
-- Responsive CSS with gradient design
+- Risk triage: Low / Medium / High with structured recommendations
+- Evidence breakdown: signal-level confidence and contribution
+- URL-based ingestion: audio/video analysis from direct URLs
+- Metadata enrichment: optional source and timestamp context
+- Extension-first flow: in-browser scanning with a persistent side panel
 
 ---
 
-## 📦 Quick Start
+## Architecture
 
-### Prerequisites
+High-level system flow:
 
-- **Python 3.9+**
-- **Node.js 18+**
-- **npm** or **yarn**
-
-### Installation
-
-#### 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/prateekhbtu/isafe-hackathon.git
-cd isafe-hackathon
+```
+Client (Next.js UI or API consumer)
+        |
+        | HTTP REST
+        v
+FastAPI Gateway
+        |
+        | Dispatch by modality
+        v
+Detection Modules (image, video, audio, text)
+        |
+        | Signals + confidence
+        v
+Risk Engine
+  - weighted aggregation
+  - threshold mapping
+  - explanation + recommendations
+        |
+        v
+JSON response (risk score, signals, guidance)
 ```
 
-#### 2️⃣ Backend Setup
+Backend responsibilities:
+
+- FastAPI endpoints in backend/main.py
+- Modality detectors in backend/detectors
+- Risk scoring and explanations in backend/risk_engine.py
+- URL media ingestion with size/duration constraints in backend/utils/url_handler.py
+
+Frontend responsibilities:
+
+- Multi-modality input experience
+- Results dashboard with explainability and signal breakdown
+- Optional NewsAPI and Gemini verification panels
+
+Scaling model:
+
+- Stateless API for horizontal scaling
+- Media ingestion with bounded size and duration limits
+- Pluggable detector modules for model upgrades
+
+---
+
+## Chrome Extension
+
+Architecture overview:
+
+```
+Web Page DOM
+    |
+    | user intent (text selection or media context)
+    v
+Content Script / Context Menu
+    |
+    | runtime messaging
+    v
+Service Worker
+    |
+    | REST API
+    v
+MDRS Backend
+    |
+    v
+Side Panel UI (signals, risk score, guidance)
+```
+
+Data flow:
+
+- Text: selection -> content script -> service worker -> POST /analyze/text
+- Image: context menu -> service worker fetches blob -> POST /analyze/image
+- Audio/Video: context menu -> URL passthrough -> POST /analyze/audio or /analyze/video
+
+Permissions model:
+
+- activeTab: user-initiated access to the current page
+- contextMenus: media scan actions
+- sidePanel: persistent results UI
+- storage: API endpoint configuration
+
+Extension file map:
+
+```
+chrome-extension/
+├── manifest.json          # Manifest V3 configuration
+├── background.js          # Service worker: menus, API calls, routing
+├── content.js             # Selection detection + UI hooks
+├── content.css            # Scan button and notification styles
+├── sidepanel.html         # Side panel container
+├── sidepanel.css          # Side panel visual system
+├── sidepanel.js           # Result rendering pipeline
+├── popup.html             # Toolbar popup
+├── popup.css              # Popup styles
+├── popup.js               # API URL config + health check
+└── icons/
+```
+
+---
+
+## External Verification APIs
+
+NewsAPI.org credibility check:
+
+- Integrates via backend/newsapi_client.py
+- Cross-references extracted claim queries against NewsAPI.org
+- Returns credibility score, sources, and sample articles
+- Optional and disabled when NEWSAPI_KEY is not configured
+
+Gemini verification (optional):
+
+- Integrates via backend/gemini_client.py
+- Adds model-based verification and additional risk factor synthesis
+- Controlled by GEMINI_API_URL health endpoint
+
+---
+
+## Quick Start
+
+Prerequisites:
+
+- Python 3.9+
+- Node.js 18+
+- npm or yarn
+
+### Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Run server
 python main.py
 ```
 
-Backend will run at: **http://localhost:8000**
+API server: http://localhost:8000
 
-#### 3️⃣ Frontend Setup
+### Frontend
 
 ```bash
-cd ../frontend
+cd frontend
 
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
 ```
 
-Frontend will run at: **http://localhost:3000**
+Web app: http://localhost:3000
+
+### Chrome Extension (optional)
+
+1. Open chrome://extensions
+2. Enable Developer mode
+3. Click Load unpacked and select chrome-extension
+4. Pin the extension and use it on any content page
 
 ---
 
-## 💻 Usage
+## Usage
 
 ### Web Interface
 
-1. Open **http://localhost:3000** in your browser
-2. Select a modality tab (Image / Video / Audio / Text)
-3. Upload media, paste a direct audio/video URL, or paste text
-4. **(Optional)** Add metadata: source, timestamp, context
-5. Click **"Analyze Media"**
-6. View:
-   - **Risk Score** (0-100)
-   - **Risk Level** (Low / Medium / High)
-   - **Signal Breakdown** with confidence scores
-   - **Explainable Recommendations**
+1. Open http://localhost:3000
+2. Select Image, Video, Audio, or Text
+3. Upload media or provide a direct URL (audio/video)
+4. Add optional metadata (source, timestamp)
+5. Click Analyze Media
+6. Review score, signals, and recommendations
 
-### API Usage (Direct)
+### API Examples
 
-#### Analyze Image
+Analyze image:
 
 ```bash
 curl -X POST http://localhost:8000/analyze/image \
@@ -192,7 +233,7 @@ curl -X POST http://localhost:8000/analyze/image \
   -F "timestamp=2026-01-15"
 ```
 
-#### Analyze Text
+Analyze text:
 
 ```bash
 curl -X POST http://localhost:8000/analyze/text \
@@ -200,7 +241,7 @@ curl -X POST http://localhost:8000/analyze/text \
   -F "source=Facebook"
 ```
 
-#### Analyze Audio by URL
+Analyze audio by URL:
 
 ```bash
 curl -X POST http://localhost:8000/analyze/audio \
@@ -208,7 +249,7 @@ curl -X POST http://localhost:8000/analyze/audio \
   -F "source=Podcast"
 ```
 
-#### Analyze Video by URL
+Analyze video by URL:
 
 ```bash
 curl -X POST http://localhost:8000/analyze/video \
@@ -240,146 +281,120 @@ curl -X POST http://localhost:8000/analyze/video \
     "suggested_steps": ["Manual review recommended", "Verify source..."],
     "human_review_required": true
   },
-  "disclaimer": "This is probabilistic assessment. Human verification essential."
+  "disclaimer": "This is a probabilistic assessment. Human verification remains essential."
 }
 ```
 
 ---
 
-## 🔬 Detection Signals
+## Detection Signals
 
-### Image Detector
+Image detector signals:
 
-| Signal | Description | Method |
-|--------|-------------|--------|
-| **Manipulation Artifacts** | Unusual dimensions, aspect ratios | Geometric analysis |
-| **Compression Anomaly** | Re-encoding patterns | File size vs. resolution |
-| **Metadata Inconsistency** | Stripped EXIF data | Metadata parsing |
-| **Noise Pattern** | Unnatural noise distribution | Pixel sampling (simulated) |
+- Manipulation artifacts: unusual geometry or aspect ratios
+- Compression anomaly: re-encoding patterns vs. resolution
+- Metadata inconsistency: missing or conflicting EXIF
+- Noise pattern: statistical noise irregularities
 
-### Video Detector
+Video detector signals:
 
-| Signal | Description | Production Equivalent |
-|--------|-------------|----------------------|
-| **Facial Warping** | Deepfake artifacts | ResNet + LSTM |
-| **Lighting/Shadow Anomaly** | Inconsistent illumination | Physics-based rendering check |
-| **Temporal Inconsistency** | Unnatural frame transitions | Optical flow analysis |
-| **Audio-Visual Mismatch** | Lip-sync issues | Cross-modal sync model |
+- Facial warping cues
+- Lighting and shadow inconsistencies
+- Temporal discontinuities across frames
+- Audio-visual mismatch indicators
 
-### Audio Detector
+Audio detector signals:
 
-| Signal | Description | Production Equivalent |
-|--------|-------------|----------------------|
-| **Spectral Anomaly** | Unnatural frequency patterns | FFT + ML classifier |
-| **Phoneme Inconsistency** | Artificial phoneme transitions | Deep phoneme model |
-| **Voice Synthesis Artifact** | TTS/cloning artifacts | WaveNet/Tacotron detector |
-| **Background Mismatch** | Environmental audio inconsistency | Scene audio model |
+- Spectral anomalies and unnatural frequency patterns
+- Phoneme consistency deviations
+- Voice synthesis artifacts
+- Background audio mismatches
 
-### Text Detector
+Text detector signals:
 
-| Signal | Description | Method |
-|--------|-------------|--------|
-| **Sensational Language** | Clickbait, hyperbole | Keyword pattern matching |
-| **Emotional Manipulation** | Fear, outrage triggers | Sentiment analysis |
-| **Stylometric Drift** | Unusual writing patterns | Sentence structure analysis |
-| **Source Credibility** | Unknown/unverified sources | Metadata validation |
+- Sensational or manipulative language markers
+- Sentiment volatility and emotional triggering
+- Stylometric drift vs. expected writing patterns
+- Source credibility indicators
 
 ---
 
-## ⚖️ Ethical Considerations
+## Ethical Considerations
 
-### Core Commitments
+Core commitments:
 
-1. **No Binary Claims**: System **never** outputs "This is fake" or "This is real"
-2. **Probabilistic Framing**: All scores presented as risk likelihoods, not certainties
-3. **Human Agency**: Users always make final decisions
-4. **Transparency**: All signal weights and logic are configurable and visible
-5. **No Surveillance**: No personal data storage, no tracking
+- No binary claims: the system does not declare "real" or "fake"
+- Probabilistic framing: risk is presented with uncertainty
+- Human agency: reviewers make final decisions
+- Transparency: weights and thresholds are configurable
+- Privacy-first: no personal data storage or tracking
 
-### Limitations (Disclosed to Users)
+Operational limits:
 
-- ❌ Cannot detect all novel manipulation techniques
-- ❌ May produce false positives/negatives
-- ❌ Depends on quality of input metadata
-- ❌ Heuristics are placeholders (production needs trained models)
-- ❌ Adversaries can evade detection by design
-
-### Recommended Usage
-
-✅ **DO:**
-- Use for preliminary triage in newsrooms
-- Support human fact-checkers
-- Provide early warnings for viral content
-- Educate users about media literacy
-
-❌ **DON'T:**
-- Automatically remove content based on scores
-- Use for surveillance or targeting individuals
-- Present scores as definitive truth
-- Deploy without human oversight
+- This system cannot detect all manipulation techniques
+- False positives and negatives are possible
+- Metadata quality affects accuracy
+- Current detectors use baseline heuristics; production deployments should integrate trained models
 
 ---
 
-## 🛠️ Configuration
+## Configuration
 
-### Adjust Risk Weights
+Environment variables:
 
-Edit `backend/risk_engine.py`:
+- NEWSAPI_KEY: enable NewsAPI.org credibility checks
+- GEMINI_API_URL: optional Gemini verification endpoint
+- ALLOWED_ORIGINS: comma-separated CORS allowlist for the API
+
+Adjust risk weights in backend/risk_engine.py:
 
 ```python
 WEIGHTS = {
-    'image': {
-        'manipulation_artifacts': 0.35,  # Adjust here
-        'metadata_inconsistency': 0.20,
-        ...
+    "image": {
+        "manipulation_artifacts": 0.35,
+        "metadata_inconsistency": 0.20,
+        # ...
     }
 }
 ```
 
-### Modify Thresholds
+Modify risk thresholds:
 
 ```python
 THRESHOLDS = {
-    'low': 30,    # 0-30: Low risk
-    'medium': 60, # 30-60: Medium risk
-    'high': 100   # 60-100: High risk
+    "low": 30,
+    "medium": 60,
+    "high": 100
 }
 ```
 
+Media ingestion limits (backend/utils/url_handler.py):
+
+- Max download size: 100 MB
+- Max media duration: 300 seconds
+- Sampling window: first 20 seconds
+- YouTube URLs require yt-dlp installed
+
 ---
 
-## 🧪 Testing
+## Testing
 
-### Test with Sample Media
+Basic API health check:
 
 ```bash
-# Backend API health check
 curl http://localhost:8000
-
-# Test text analysis
-curl -X POST http://localhost:8000/analyze/text \
-  -F "text=This is a normal statement."
-
-# Test audio via URL
-curl -X POST http://localhost:8000/analyze/audio \
-  -F "url=https://example.com/sample.mp3"
-
-# Expected: Low risk score
 ```
 
-### Production Deployment Checklist
+Sample text analysis:
 
-- [ ] Replace heuristics with trained ML models
-- [ ] Add rate limiting to API endpoints
-- [ ] Implement authentication for production use
-- [ ] Set up HTTPS
-- [ ] Add comprehensive logging
-- [ ] Integrate fact-checking APIs
-- [ ] Conduct bias/fairness audits
+```bash
+curl -X POST http://localhost:8000/analyze/text \
+  -F "text=This is a normal statement."
+```
 
 ---
 
-## 📚 Project Structure
+## Project Structure
 
 ```
 isafe-hackathon/
@@ -387,30 +402,26 @@ isafe-hackathon/
 │   ├── main.py                    # FastAPI server
 │   ├── risk_engine.py             # Risk scoring logic
 │   ├── requirements.txt           # Python dependencies
-│   └── detectors/
-│       ├── __init__.py
-│       ├── image_detector.py      # Image analysis
-│       ├── video_detector.py      # Video analysis
-│       ├── audio_detector.py      # Audio analysis
-│       └── text_detector.py       # Text analysis
-├── frontend/
-│   ├── app/
-│   │   ├── layout.tsx             # Root layout
-│   │   ├── page.tsx               # Main page component
-│   │   └── globals.css            # Global styles
+│   ├── detectors/                 # Modality detectors
+│   └── utils/                     # URL handling and helpers
+├── chrome-extension/              # Browser extension
+├── frontend/                      # Next.js app
+│   ├── app/                       # UI pages and layout
 │   ├── package.json               # Node dependencies
 │   ├── tsconfig.json              # TypeScript config
 │   └── next.config.js             # Next.js config
+├── test_api.py                    # API smoke test
 └── README.md                      # This file
 ```
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Backend (FastAPI)
 
-**Option 1: Docker**
+Docker:
+
 ```dockerfile
 FROM python:3.9-slim
 WORKDIR /app
@@ -419,19 +430,13 @@ RUN pip install -r requirements.txt
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-**Option 2: Cloud (Render, Railway, etc.)**
-- Deploy `backend/` folder
-- Set start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+Cloud (Render, Railway, etc.):
+
+- Deploy backend/
+- Start command: uvicorn main:app --host 0.0.0.0 --port $PORT
 
 ### Frontend (Next.js)
 
-**Vercel (Recommended):**
-```bash
-cd frontend
-vercel deploy
-```
-
-**Manual Build:**
 ```bash
 npm run build
 npm start
@@ -439,47 +444,24 @@ npm start
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-This is a hackathon prototype. Contributions welcome for:
+Contributions welcome for:
 
-- Integrating real ML models (ResNet, audio classifiers, etc.)
+- Integrating trained ML models
 - Adding cross-modal consistency checks
-- Improving UI/UX
-- Writing tests
-- Enhancing documentation
+- Improving UI/UX and accessibility
+- Writing tests and benchmarking
+- Expanding verification integrations
 
 ---
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Support
 
-Inspired by:
-- VerifEye's explainable detection approach
-- Ethical AI frameworks (Partnership on AI, IEEE)
-- Misinformation research community
-
-**Built for:** iSafe Hackathon 2026  
-**Focus:** Cyber policy, human-centered AI, media literacy
-
----
-
-## 📞 Support
-
-For questions or issues:
-- Create an issue on GitHub
-
----
-
-<div align="center">
-
-**⚠️ Remember: This tool assists humans, it doesn't replace them. ⚠️**
-
-*"The best defense against misinformation is human judgment informed by transparent technology."*
-
-</div>
+Create an issue on GitHub for questions or bugs.
