@@ -264,7 +264,9 @@ async def analyze_image(
     file: UploadFile = File(...),
     source: Optional[str] = Form(None),
     timestamp: Optional[str] = Form(None),
-    context: Optional[str] = Form(None)
+    context: Optional[str] = Form(None),
+    gemini_api_key: Optional[str] = Form(None),
+    gemini_model: Optional[str] = Form(None)
 ):
     """
     Analyze an uploaded image for deception risk signals.
@@ -305,6 +307,8 @@ async def analyze_image(
                 signals=signals,
                 metadata={'source': source, 'timestamp': timestamp, 'context': context},
                 newsapi_result=newsapi_result,
+                gemini_api_key=gemini_api_key,
+                gemini_model=gemini_model,
             )
             
             return JSONResponse(content=result)
@@ -323,7 +327,9 @@ async def analyze_video(
     url: Optional[str] = Form(None),
     source: Optional[str] = Form(None),
     timestamp: Optional[str] = Form(None),
-    context: Optional[str] = Form(None)
+    context: Optional[str] = Form(None),
+    gemini_api_key: Optional[str] = Form(None),
+    gemini_model: Optional[str] = Form(None)
 ):
     """
     Analyze a video for deception risk signals.
@@ -364,7 +370,9 @@ async def analyze_video(
                     'timestamp': timestamp,
                     'context': context,
                     'url_metadata': url_meta,
-                }
+                },
+                gemini_api_key=gemini_api_key,
+                gemini_model=gemini_model,
             )
 
             # Add URL metadata to result if applicable
@@ -397,7 +405,9 @@ async def analyze_audio(
     url: Optional[str] = Form(None),
     source: Optional[str] = Form(None),
     timestamp: Optional[str] = Form(None),
-    context: Optional[str] = Form(None)
+    context: Optional[str] = Form(None),
+    gemini_api_key: Optional[str] = Form(None),
+    gemini_model: Optional[str] = Form(None)
 ):
     """
     Analyze an audio file for deception risk signals.
@@ -438,7 +448,9 @@ async def analyze_audio(
                     'timestamp': timestamp,
                     'context': context,
                     'url_metadata': url_meta,
-                }
+                },
+                gemini_api_key=gemini_api_key,
+                gemini_model=gemini_model,
             )
 
             # Add URL metadata to result if applicable
@@ -470,7 +482,9 @@ async def analyze_text(
     text: str = Form(...),
     source: Optional[str] = Form(None),
     timestamp: Optional[str] = Form(None),
-    context: Optional[str] = Form(None)
+    context: Optional[str] = Form(None),
+    gemini_api_key: Optional[str] = Form(None),
+    gemini_model: Optional[str] = Form(None)
 ):
     """
     Analyze text content for deception risk signals.
@@ -503,6 +517,8 @@ async def analyze_text(
             signals=signals,
             metadata={'source': source, 'timestamp': timestamp, 'context': context},
             newsapi_result=newsapi_result,
+            gemini_api_key=gemini_api_key,
+            gemini_model=gemini_model,
         )
         
         return JSONResponse(content=result)

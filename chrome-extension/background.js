@@ -16,6 +16,17 @@ async function getApiUrl() {
   return apiUrl;
 }
 
+async function getGeminiKey() {
+  const { geminiApiKey } = await chrome.storage.sync.get({ geminiApiKey: "" });
+  return (geminiApiKey || "").trim();
+}
+
+// Attach the user's own Gemini API key (BYOK) to a request, if configured.
+async function appendGeminiKey(formData) {
+  const key = await getGeminiKey();
+  if (key) formData.append("gemini_api_key", key);
+}
+
 // ── Context Menus ───────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(() => {
   // Parent menu
@@ -169,6 +180,7 @@ async function analyzeText(text, pageUrl) {
   const formData = new FormData();
   formData.append("text", text);
   formData.append("source", pageUrl || "Chrome Extension");
+  await appendGeminiKey(formData);
 
   try {
     const resp = await fetch(`${apiUrl}/analyze/text`, {
@@ -210,6 +222,7 @@ async function analyzeImageByUrl(imageUrl, pageUrl) {
     formData.append("file", blob, "image.jpg");
     formData.append("source", pageUrl || "Chrome Extension");
     formData.append("context", `Image from: ${pageUrl}`);
+    await appendGeminiKey(formData);
 
     const resp = await fetch(`${apiUrl}/analyze/image`, {
       method: "POST",
@@ -238,6 +251,7 @@ async function analyzeMediaByUrl(modality, mediaUrl, pageUrl) {
   const formData = new FormData();
   formData.append("url", mediaUrl);
   formData.append("source", pageUrl || "Chrome Extension");
+  await appendGeminiKey(formData);
 
   try {
     const resp = await fetch(`${apiUrl}/analyze/${modality}`, {

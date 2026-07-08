@@ -15,12 +15,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusDot = document.getElementById("status-dot");
   const statusText = document.getElementById("status-text");
   const openPanelBtn = document.getElementById("open-panel-btn");
+  const geminiKeyInput = document.getElementById("gemini-key");
+  const saveKeyBtn = document.getElementById("save-key-btn");
+  const keyHint = document.getElementById("key-hint");
 
-  // Load saved API URL
-  const { apiUrl } = await chrome.storage.sync.get({
+  // Load saved API URL + Gemini API key
+  const { apiUrl, geminiApiKey } = await chrome.storage.sync.get({
     apiUrl: DEFAULT_API_URL,
+    geminiApiKey: "",
   });
   apiUrlInput.value = apiUrl;
+  geminiKeyInput.value = geminiApiKey;
 
   // Check backend status
   checkStatus(apiUrl);
@@ -42,6 +47,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 2000);
 
     checkStatus(cleanUrl);
+  });
+
+  // Save Gemini API key (BYOK)
+  saveKeyBtn.addEventListener("click", async () => {
+    const key = geminiKeyInput.value.trim();
+    await chrome.storage.sync.set({ geminiApiKey: key });
+
+    keyHint.textContent = key
+      ? "✓ Saved — your key will be used for scans"
+      : "✓ Cleared — hosted Gemini will be used";
+    keyHint.style.color = "#16a34a";
+    setTimeout(() => {
+      keyHint.textContent =
+        "Stored only in this browser. Sent with each scan and used instead of the hosted Gemini.";
+      keyHint.style.color = "";
+    }, 2500);
   });
 
   // Open side panel

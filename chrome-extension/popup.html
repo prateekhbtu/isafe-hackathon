@@ -55,6 +55,23 @@
         <button class="popup-save-btn" id="save-url-btn">Save</button>
       </div>
       <p class="popup-hint" id="save-hint"></p>
+
+      <label class="popup-label" for="gemini-key" style="margin-top: 12px;">
+        Your Gemini API Key <span style="opacity:0.6;font-weight:400;">(optional)</span>
+      </label>
+      <div class="popup-input-row">
+        <input
+          type="password"
+          id="gemini-key"
+          class="popup-input"
+          placeholder="AIza... (leave blank for hosted)"
+          autocomplete="off"
+        />
+        <button class="popup-save-btn" id="save-key-btn">Save</button>
+      </div>
+      <p class="popup-hint" id="key-hint">
+        Stored only in this browser. Sent with each scan and used instead of the hosted Gemini.
+      </p>
     </div>
 
     <!-- Footer -->

@@ -63,16 +63,21 @@ class RiskScoringEngine:
         signals: List[Dict[str, Any]],
         metadata: Dict[str, Any] = None,
         newsapi_result: Optional[Dict[str, Any]] = None,
+        gemini_api_key: Optional[str] = None,
+        gemini_model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Calculate risk score from detected signals.
-        
+
         Args:
             modality: Type of media (image, video, audio, text)
             signals: List of detected signals with confidence scores
             metadata: Optional context (source, timestamp, etc.)
             newsapi_result: Optional NewsAPI verification result
-        
+            gemini_api_key: Optional user-supplied Gemini API key (BYOK). When
+                provided, it is used instead of the hosted Gemini proxy.
+            gemini_model: Optional Gemini model name to use with the API key.
+
         Returns:
             Risk assessment with score, level, explanation, and recommendations
         """
@@ -123,10 +128,11 @@ class RiskScoringEngine:
         gemini_analysis = None
         gemini_signals = []
         
-        if gemini_client.is_available():
+        if gemini_client.is_available(api_key=gemini_api_key):
             try:
                 gemini_analysis = await gemini_client.analyze_media_risk(
-                    modality, signals, metadata or {}
+                    modality, signals, metadata or {},
+                    api_key=gemini_api_key, model=gemini_model,
                 )
                 
                 if gemini_analysis:

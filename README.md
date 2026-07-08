@@ -164,7 +164,24 @@ Gemini verification (optional):
 
 - Integrates via backend/gemini_client.py
 - Adds model-based verification and additional risk factor synthesis
-- Controlled by GEMINI_API_URL health endpoint
+- Two ways to reach Gemini, in priority order:
+  1. A direct Google Gemini API key. Set GEMINI_API_KEY as a server-wide
+     default, or let each user bring their own key (BYOK) from the web tool
+     or the browser extension — the per-request key overrides everything.
+  2. A self-hosted Gemini proxy via GEMINI_API_URL (used only when no API
+     key is available), gated by its /health endpoint.
+- The model for direct API-key calls is set by GEMINI_MODEL (default
+  gemini-1.5-flash).
+
+Key handling:
+
+- Web tool: uses whatever Gemini backend the server is configured with
+  (GEMINI_API_KEY or GEMINI_API_URL). No key is entered or stored in the
+  browser — configure it securely on the backend.
+- Extension: optionally paste a key into the popup's "Your Gemini API Key"
+  field. It is stored in chrome.storage.sync and attached to each scan; leave
+  it blank to use the server's configured Gemini.
+- Get a key at https://aistudio.google.com/app/apikey
 
 ---
 
@@ -343,7 +360,9 @@ Operational limits:
 Environment variables:
 
 - NEWSAPI_KEY: enable NewsAPI.org credibility checks
-- GEMINI_API_URL: optional Gemini verification endpoint
+- GEMINI_API_KEY: optional server-wide Google Gemini API key (users can also supply their own per request)
+- GEMINI_MODEL: Gemini model for direct API-key calls (default: gemini-1.5-flash)
+- GEMINI_API_URL: optional self-hosted Gemini proxy endpoint (fallback when no key is set)
 - ALLOWED_ORIGINS: comma-separated CORS allowlist for the API
 
 Adjust risk weights in backend/risk_engine.py:
