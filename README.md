@@ -480,7 +480,4 @@ Contributions welcome for:
 MIT License - See LICENSE file for details.
 
 ---
-
-## Support
-
-Create an issue on GitHub for questions or bugs.
+developed by Engineers at HBTU Kanpur
